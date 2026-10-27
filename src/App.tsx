@@ -9,6 +9,14 @@ import { Footer } from './components/Footer';
 import { FilterBy } from './types/FilterBy';
 import { ErrorType } from './types/ErrorType';
 
+const ERROR_MESSAGES: Record<ErrorType, string> = {
+  [ErrorType.Load]: 'Unable to load todos',
+  [ErrorType.Empty]: 'Title should not be empty',
+  [ErrorType.Add]: 'Unable to add a todo',
+  [ErrorType.Delete]: 'Unable to delete a todo',
+  [ErrorType.Update]: 'Unable to update a todo',
+};
+
 export const App: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [errorMessage, setErrorMessage] = useState<ErrorType | null>(null);
@@ -26,6 +34,7 @@ export const App: React.FC = () => {
     setErrorMessage(null);
     try {
       const data = await client.get<Todo[]>(`/todos?userId=${USER_ID}`);
+
       setTodos(data);
     } catch {
       setErrorMessage(ErrorType.Load);
@@ -58,6 +67,7 @@ export const App: React.FC = () => {
 
     if (!title) {
       setErrorMessage(ErrorType.Empty);
+
       return;
     }
 
@@ -126,6 +136,7 @@ export const App: React.FC = () => {
       );
 
       const hasErrors = results.some(result => result.status === 'rejected');
+
       if (hasErrors) {
         setErrorMessage(ErrorType.Delete);
       } else {
@@ -141,11 +152,13 @@ export const App: React.FC = () => {
   const handleBlur = async (todo: Todo) => {
     if (!editText.trim()) {
       await deleteTodo(todo.id);
+
       return;
     }
 
     if (editText.trim() === todo.title) {
       setEditedTodoId(null);
+
       return;
     }
 
@@ -155,6 +168,7 @@ export const App: React.FC = () => {
       const updatedTodo = await client.patch<Todo>(`/todos/${todo.id}`, {
         title: editText.trim(),
       });
+
       setTodos(currentTodos =>
         currentTodos.map(t => (t.id === todo.id ? updatedTodo : t)),
       );
@@ -175,11 +189,13 @@ export const App: React.FC = () => {
 
     if (!editText.trim()) {
       await deleteTodo(todo.id);
+
       return;
     }
 
     if (editText.trim() === todo.title) {
       setEditedTodoId(null);
+
       return;
     }
 
@@ -189,6 +205,7 @@ export const App: React.FC = () => {
       const updatedTodo = await client.patch<Todo>(`/todos/${todo.id}`, {
         title: editText.trim(),
       });
+
       setTodos(currentTodos =>
         currentTodos.map(t => (t.id === todo.id ? updatedTodo : t)),
       );
@@ -258,9 +275,11 @@ export const App: React.FC = () => {
       setTodos(currentTodos =>
         currentTodos.map(todo => {
           const index = todosToUpdate.findIndex(t => t.id === todo.id);
+
           if (index !== -1 && results[index].status === 'fulfilled') {
             return { ...todo, completed: targetStatus };
           }
+
           return todo;
         }),
       );
@@ -269,6 +288,14 @@ export const App: React.FC = () => {
     } finally {
       setUpdatingTodoIds([]);
     }
+  };
+
+  const isTodoLoading = (todoId: number) => {
+    return (
+      todoId === 0 ||
+      deletingTodoIds.includes(todoId) ||
+      updatingTodoIds.includes(todoId)
+    );
   };
 
   const filterLinks = [
@@ -307,11 +334,7 @@ export const App: React.FC = () => {
                 toggleTodo={t => void toggleTodo(t)}
                 handleEditing={(e, t) => void handleEditing(e, t)}
                 handleBlur={t => void handleBlur(t)}
-                isLoading={
-                  todo.id === 0 ||
-                  deletingTodoIds.includes(todo.id) ||
-                  updatingTodoIds.includes(todo.id)
-                }
+                isLoading={isTodoLoading(todo.id)}
               />
             ))}
           </section>
@@ -341,11 +364,7 @@ export const App: React.FC = () => {
           className="delete"
           onClick={() => setErrorMessage(null)}
         />
-        {errorMessage === ErrorType.Load && 'Unable to load todos'}
-        {errorMessage === ErrorType.Empty && 'Title should not be empty'}
-        {errorMessage === ErrorType.Add && 'Unable to add a todo'}
-        {errorMessage === ErrorType.Delete && 'Unable to delete a todo'}
-        {errorMessage === ErrorType.Update && 'Unable to update a todo'}
+        {errorMessage && ERROR_MESSAGES[errorMessage]}
       </div>
     </div>
   );
